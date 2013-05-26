@@ -16,9 +16,19 @@
   height: 2px;
   position: absolute;
   top: 85%;
-  width: 100%;
+  width: calc(100% + 20px);
   background-color: lightgray;
   z-index: 5;
+}
+.bacon-output:after, .bacon-input:after {
+    content: '\25B6';
+    color: lightgray;
+    width: 20px;
+    font-size: 20px;
+    height: 20px;
+    position: absolute;
+    right: -40px;
+    top: 22px;
 }
 .bacon-input span {
  z-index: 10;
@@ -27,7 +37,7 @@
  font-weight: bold;
  background-color: #000080;
  color: white;
- font-family: "beteckna lower case bold";
+ font-family: "nexa bold", sans-serif;
  padding: 0.4em 0.9em;
  border-radius: 2em;
  margin: 0.5em;

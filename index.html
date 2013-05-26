@@ -61,17 +61,15 @@ clicky_site_ids.push(100617914);
   floor.</p>
 
 <div style="float: right; margin-left: 1em">
-  <img border="0" width="320" height="207" src="iphone.jpg" style="float: right;">
-  <p style="float: none; clear: both; font-size: small"> 
-    Doesn't even ship with snake 
-  </p>
+  <img border="0" width="320" src="https://raw.github.com/baconjs/bacon.js/master/logo.png" style="float: right;">
 </div>
 
 <p> Bacon.js is a javascript library for doing reactive programming,
-    much like Microsoft's Rx. The fundamental unit of abstraction here
-    is the event stream, unlike promises that abstract over a
-    single event. Using streams allows simple expression of behaviour
-    that span over time and multiple events  </p>
+    much like Microsoft's Rx. The fundamental abstraction here are
+    observable event streams. Streams are similar to promises, except
+    that they represent a series of multiple events.  Using streams
+    allows simple expression of behaviour that span over time and
+    multiple events </p>
 
 <p> Writing a game with streams is a great way to get more familiar
     with the event stream abstraction. You can go on to use it to
@@ -230,10 +228,11 @@ is often useful in combination with <code>asEventStream</code> as
 <h3> Scan </h3>
 
 <p> Bacon's <code>scan</code> combinator lets us accumulate
-values. This works pretty much like javascript's <code>reduce</code>
-over arrays, except its asynchronous. We provide an initial value, and
-a function to combine values. The stream now contains the aggregated
-value at each point.</p>
+values. This works a lot like javascript's <code>reduce</code> over
+arrays, except its asynchronous and produces multiple values over
+time. To use it, we provide an initial value, and a function to
+combine values. The stream now contains the aggregated value at each
+point.</p>
 
 <div class="bacon-marble">
   <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [1,2,3,4,5])"> </div>
@@ -319,11 +318,11 @@ accumulate. We're going to want to be able to control the snake by
 changing directions, so we'll define functions for that. </p>
 
 <pre class="inline">function rotateLeft(pos) {
-  return new Pos(pos.y, -pos.x)
+  return new Vector2(pos.y, -pos.x)
 }
 
 function rotateRight(pos) {
-  return new Pos(-pos.y, pos.x)
+  return new Vector2(-pos.y, pos.x)
 }</pre>
 
 <p>We introduce two buttons for rotating left and right, and get
@@ -350,7 +349,7 @@ var actions =
   value, <code>startDirection</code>. </p>
 
 <pre class="inline">
-var startDirection = new Pos(0,1)
+var startDirection = new Vector2(0,1)
 var direction = actions.scan(startDirection, (x, f) =&gt; f(x))
 </pre>
 
@@ -366,6 +365,8 @@ var direction = actions.scan(startDirection, (x, f) =&gt; f(x))
   <div class="bacon-output" x-bacon-output="function(a,b) { return a.sampledBy(b) }"></div>
 </div>
 <div class="bacon-label"> <code> streamA.sampledBy(streamB) </code> <br /> </div>
+
+<p> Technically, Bacon requires you to 
 
 <p>Back to the game: In order to get a current position, we need to
    accumulate the current direction. We'd like to advance the game on
@@ -391,7 +392,7 @@ var currentDirection = direction.sampledBy(tick)
 current direction from a starting postion, <code>startPosition</code>. </p>
 
 <pre class="inline">
-var startPosition = new Pos(0,0)
+var startPosition = new Vector2(0,0)
 var position = currentDirection.scan(
   startPosition, (x, y) =&gt; x.add(y))
 </pre>
@@ -437,22 +438,22 @@ Here's the Bacon code so far.
       game.find('.row:eq('+p.y+')').find('.cell:eq('+p.x+')').addClass('apple')
     }
   }
-  function Pos(x, y) {
+  function Vector2(x, y) {
     this.x = x; this.y = y;
     this.describe = x + ', ' + y
     this.equals = function(p) { return this.x === p.x && this.y === p.y }
-    this.add = function(p) { return new Pos((this.x + p.x + gameX) % gameX, (this.y + p.y + gameX) % gameX) }
+    this.add = function(p) { return new Vector2((this.x + p.x + gameX) % gameX, (this.y + p.y + gameX) % gameX) }
   }
   
   randomPos = function() {
-    return new Pos(Math.floor(Math.random() * 5), Math.floor(Math.random() * 5))
+    return new Vector2(Math.floor(Math.random() * 5), Math.floor(Math.random() * 5))
   }
 
   function rotateRight(pos) {
-    return new Pos(-pos.y, pos.x)
+    return new Vector2(-pos.y, pos.x)
   }
   function rotateLeft(pos) {
-    return new Pos(pos.y, -pos.x)
+    return new Vector2(pos.y, -pos.x)
   }
 </script>
 
@@ -482,8 +483,8 @@ Here's the Bacon code so far.
          lefts.map(function() { return rotateLeft }).merge(
         rights.map(function() { return rotateRight }))
 
-      var startDirection = new Pos(0,1),
-          startPosition = new Pos(0,0)
+      var startDirection = new Vector2(0,1),
+          startPosition = new Vector2(0,0)
       var direction = actions.scan(startDirection, function(x, f) { return f(x) })
       var position  = direction
         .sampledBy(tick)
@@ -509,8 +510,8 @@ var actions =
    lefts.map(() =&gt; rotateLeft).merge(
   rights.map(() =&gt; rotateRight))
 
-var startDirection = new Pos(0,1),
-    startPosition = new Pos(0,0)
+var startDirection = new Vector2(0,1),
+    startPosition = new Vector2(0,0)
 
 var direction = actions.scan(startDirection, (x, f) =&gt; f(x) )
 var position  = direction
@@ -578,7 +579,7 @@ If you're following along so far you might figure we'd implement
 something along the lines of the following.
 
 <pre class="inline">
-var applePos = new Pos(3,3)
+var applePos = new Vector2(3,3)
 var apple = position
   .filter(p =&gt; p.equals(applePos)) 
   .take(1)
@@ -782,8 +783,8 @@ var actions =
    lefts.map(() =&gt; rotateLeft).merge(
   rights.map(() =&gt; rotateRight))
 
-var startDirection = new Pos(0,1),
-    startPosition = new Pos(0,0)
+var startDirection = new Vector2(0,1),
+    startPosition = new Vector2(0,0)
 
 var direction = actions.scan(startDirection, (x,f) =&gt; f(x))
 var position  = direction

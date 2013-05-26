@@ -1,6 +1,13 @@
+@font-face {
+    font-family: "nexa light";
+    src: url('nexa light.otf');
+}
 
-@font-face {font-family:"Beteckna lower case";src:url("Beteckna_by_tarzeau.eot?") format("eot"),url("Beteckna_by_tarzeau.woff") format("woff"),url("Beteckna_by_tarzeau.ttf") format("truetype"),url("Beteckna_by_tarzeau.svg#BetecknaLowerCase") format("svg");font-weight:normal;font-style:normal;}
-@font-face {font-family:"Beteckna lower case bold";src:url("BetecknaLowerCaseBold.ttf") format("truetype") }
+@font-face {
+    font-family: "nexa bold";
+    src: url('nexa bold.otf');
+}
+
 
 body { 
   font-size: 110%;
@@ -8,9 +15,11 @@ body {
   padding: 0;
   font-family: calibri, "open sans", sans-serif;
   background-color: #eeeeee;
+  background-color: #fafafa;
 }
 article.content {
   padding: 3em; 
+  padding-top: 2.2em;
   background-color: rgb(249,250,252);
 }
 article.content, #header-text-wrapper { 
@@ -23,35 +32,41 @@ article.content, #header-text-wrapper {
   background-color: #202020;
   color: white;
 }
-h2 {
-  letter-spacing: 0.1em;
-  line-height: 1.2em;
-}
 p.intro { 
- font-family: "beteckna lower case", sans-serif; 
- font-size: 120%;
- letter-spacing: 0.05em;
+ padding-bottom: 0.8em;
+ padding-top: 0.2em;
+ font-family: "nexa light", sans-serif; 
+ font-size: 110%;
+ -webkit-text-stroke: 0.4px;
+line-height: 1.4em;
 }
 
+.header h1 {
+  font-family: "nexa light", sans-serif;
+}
 h2,h3,p {
-  color: #202020;
+  color: #303030;
   margin-top: 1em;
 }
 
+h2,h3 {
+  -webkit-text-stroke: 1px;
+}
+
 h1 { margin: 0 }
-h1, h2 { font-family: "beteckna lower case bold", "beteckna lower case", sans-serif;  }
-h3     { font-family: "beteckna lower case", sans-serif; font-size: 170% }
+h1, h2 { font-family: "nexa bold", sans-serif;  }
+h3     { font-family: "nexa light", sans-serif; font-size: 170% }
 h2 { margin: 0;}
-h2 { font-size: 300%; }
+h2 { font-size: 245%; }
 code, pre { 
-  font-family: "droid sans mono"; 
+  font-family: "droid sans mono", "consolas", "inconsolata", "lucida console", "mono"; 
   font-size: 80%; 
   border-radius: 0.3em;
 }
 pre { margin: 1em }
 
 p.intro a {
-  font-weight: bold;
+ font-family: "nexa light", sans-serif; 
 }
 
 a {
@@ -59,7 +74,7 @@ a {
 }
 
 a:visited {
-  color: #008000;
+  color: #000080;
 }
 
 button {
@@ -69,7 +84,7 @@ button {
   border-radius: 5px; 
   color: white;
   border: none;
-  font-family: "beteckna lower case";
+  font-family: "nexa light";
   margin-bottom: 1em;
 }
 
