@@ -730,28 +730,14 @@ length value, and so we don't call the sink function with anything.
   ourselves to something like promises. </p>
 
 <p> So below is our, for now, final version of the game. The remaining
-features are left as an exercise for the reader to familiarize herself
-further with Bacon.js. Features to do.</p>
-
-<ul>
-  <li> Restart the game when the snake is eating itself. </li>
-  <li> Make sure there are no "lost" key events. That is if the play
-  queues commands by rapidly pushing buttons, make sure they are
-  handled on subsequent ticks. </li>
-  <li> Make sure the apple doesn't spawn inside the snake.
-</ul>
-
-<p> For restarting, I recommend taking a look at the Bacon docs,
-    especially the <code>takeUntil</code> combinator, and combining it
-  with event switching. </p>
-
-<p> For queueing input, check out join patterns. </p>
+    features are left as an exercise for the reader to familiarize herself
+  further with Bacon.js. </p>
 
 <p> Hope you enjoyed following along in this tutorial. Here's out
-final version of the game with code. If you want to cheat and check
-out the finished version, you can play
-it <a href="http://philipnilsson.github.io/Snake-Bacon/">
-here.</a></p>
+    final version of the game with code. If you want to cheat and
+    check out the finished version, you can play
+    it <a href="http://philipnilsson.github.io/Snake-Bacon/">here.</a>
+  </p>
 
 <div id="example6" class="ex">  
   
@@ -845,48 +831,7 @@ var gameStarted = false;
   })
 </script> 
 
-<script type="text/javascript">
-Bacon.logMarble = function(elem, stream) {
-  stream.onValue(function(x) {
-    var time = window.sc.now()
-    var parent = $(elem).parent()
-    var mn = parent.attr('x-time-min')
-    var min = Math.min(time, typeof mn === 'undefined' ? 9007199254740992 : parseInt(mn))
-    var max = Math.max(time, parseInt(parent.attr('x-time-max')) || 0)
-    parent.attr('x-time-min', min);
-    parent.attr('x-time-max', max);
-    var content = typeof x.describe === 'undefined' ? x : x.describe;
-    $(elem).append(
-      $('<span style="position: absolute" x-time="'+time+'"/>').html(content))
-  })
-}
-
-$('.bacon-marble').each(function() {
- var inputs = $(this).find('.bacon-input').map(function() {
-   var stream = eval(this.attributes['x-bacon-input'].value)
-   $(this).append('<div style="display: inline">&nbsp;</div>')
-   Bacon.logMarble(this, stream)
-   return stream
- }).toArray()
- $(this).find('.bacon-output').each(function() {
-   var stream = eval('(' + this.attributes['x-bacon-output'].value + ')').apply(null, inputs)
-   var elem = this;
-   $(this).append('<div style="display: inline">&nbsp;</div>')
-   Bacon.logMarble(this, stream)
-   stream.onEnd(function() {
-     var parent = elem.parentNode;
-     var elems = $(parent).children('div').children('span').toArray()
-     var max = parent.attributes['x-time-max'].value
-     var min = parent.attributes['x-time-min'].value
-     var delta = max - min
-     for (var i in elems) {
-       $(elems[i]).css('left', Math.floor(100 * (elems[i].attributes['x-time'].value - min) / delta / 1.1)*1 + 2 + '%')
-    }
-   })
- })
- 
-})
-</script>
+<script type="text/javascript" src="marble.js"></script>
 
 </article>
 
