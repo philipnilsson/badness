@@ -1,0 +1,894 @@
+<!DOCTYPE html>
+<html>
+<head>
+
+<script type="text/javascript" src="jquery.js"></script>
+<script type="text/javascript" src="bacon.js"> </script>
+<script type="text/javascript" src="tickscheduler.js"></script>
+
+<script type="text/javascript"> 
+window.sc = new TickScheduler()
+window.oldTimer = Bacon.scheduler
+Bacon.scheduler = window.sc
+</script>
+
+<link href="tmp.css" rel="stylesheet" type="text/css">
+<link href="snake.css" rel="stylesheet" type="text/css">
+<link href="marble.css" rel="stylesheet" type="text/css">
+<link href='http://fonts.googleapis.com/css?family=Droid+Sans+Mono' rel='stylesheet' type='text/css'>
+
+</head>
+<body> 
+<div class="header">
+  <div id="header-text-wrapper"> <h1> Badness 10k </h1> </div>
+</div>
+
+<article class="content">
+
+<h2> Implementing Snake in Bacon.js </h2>
+
+<p class="intro"> In this post we're going to explore the awesome
+  reactive programming
+  library <a href="https://github.com/raimohanska/bacon.js">
+  Bacon.js</a> by implementing the classic game Snake, which you may
+  have played on your Nokia back in the good old days, before this
+  modern fad of "smart" phones that break when you drop them on the
+  floor.</p>
+
+<div style="float: right; margin-left: 1em">
+  <img border="0" width="320" height="207" src="iphone.jpg" style="float: right;">
+  <p style="float: none; clear: both; font-size: small"> 
+    Doesn't even ship with snake 
+  </p>
+</div>
+
+<p> Bacon.js is a javascript library for doing reactive programming,
+    much like Microsoft's Rx. The fundamental unit of abstraction here
+    is the <i> event stream </i>, unlike promises that abstract over a
+    single event. Using streams allows simple expression of behaviour
+    that span over time and multiple events  </p>
+
+<p> Writing a game with streams is a great way to get more familiar
+    with the event stream abstraction. You can go on to use it to
+    structure any asynchronous programming task, such as your ajax or
+    node callbacks. </p>
+
+
+<p> <i> Note: In this post I'll be using typescript notation for
+lambdas, e.g. the addition function will be written  </i> <code> (x,y) =&gt; x +
+y.</code> </p>
+
+<h3> Marble diagrams </h3>
+
+<p> When dealing with streams of events we often document the result
+  of operations in terms of marble diagrams. Below is a marble diagram
+  for the <code>merge</code> operation, that takes two event
+  streams, <code>  </code> and <code> b </code> and
+  produces a stream containing the events from both streams. </p>
+
+<style type="text/css">
+h3 {
+  color: #404040;
+  margin-top: 1em;
+}
+</style>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [9,0,2,0,0,3]).filter(function(x) { return x })"> </div>
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [0,1,0,12,8,0]).filter(function(x) { return x })"> </div>
+  <div class="bacon-output" x-bacon-output="function(a,b) { return a.merge(b) }"></div>
+</div>
+<div class="bacon-label"> <code> a.merge(b) </code> <br /> </div>
+
+<h3> Getting a hold of events </h3>
+
+<p>The first thing we need to do is get our hands some events so we
+   have something to play with. For starters we'll skip the keyboard
+   events and timers and just use buttons, so we can step through the
+   game easily.</p>
+
+<p>Bacon.js provides a single integration point with jQuery via
+   the <code>$.fn.asEventStream</code> function. This takes the event
+   name and creates a corresponding event stream as so:
+
+<pre class="inline"> var clicks = $('#myButton').asEventStream('click')
+</pre>
+
+<p> This, of course, gives us a stream of events that occur each time
+  we click <code>myButton</code>. The contents of the events will be jQuery
+  click-events. </p>
+
+
+<h3> Subscribing </h3>
+
+<p> In order to actually do anything with these events we need to <i>
+    subscribe </i> to the event stream. We can do this with
+    the <code>onValue</code> method. This takes a callback to execute
+    for each event from the stream. </p>
+
+<pre class="inline">
+clicks.onValue(() => alert('clicked!'))
+</pre>
+
+<p>It might seem confusing that we're already talking about
+   callbacks. Bacon.js is supposed to let us escape from callback
+   hell. However, Bacon lets us manage event streams through
+   various <i> combinators </i>, like the already
+   mentioned <code>merge</code>. We will look at these next. For now
+   we are at least separating the concerns of defining what events
+   take place, and how we react to them. </p>
+
+<p> Here's an example of what we've learned so far, just doing some
+  simple DOM manipulation with jQuery. Of course, this could have been
+  just as easily implemented using a callback.</p>
+
+
+<style type="text/css">
+ .example { 
+   padding: 1em; 
+   margin: 0.5em 0;
+ }
+ .ex { 
+  margin-top: 1em;
+   padding: 1em;
+   background-color: rgb(239,240,242);
+   clear: both;
+ }
+ pre {
+   padding: 1em 1em;
+   margin: 1em 0;
+ }
+ .inline {
+   border: none;
+   background-color: rgb(239,240,242);
+ }
+ h1, h3, h3 {
+  font-weight: normal;
+  clear: both;
+ } 
+ pre, code {
+   word-wrap: normal;
+ } 
+ code {
+  color: #0000aa;
+ }
+
+</style>
+
+<div class="ex" id="example1">
+<div class="example">
+  <button id="go"> Click me! </button>
+  <div class="output"> </div>
+</div>
+
+<script type="text/javascript">
+  var go = $('#go').asEventStream('click');
+  go.onValue(function() { $('#example1 .output').append('clicked! '); })
+</script>
+
+<pre>var go = $('#clickMe').asEventStream('click');
+go.onValue (
+  () => $('#output').append('clicked!'))
+</pre>
+</div>
+
+<p> Ok, so hardly amazing. The point of Bacon is to use combinators to
+structure event streams, so lets take a look at some. </p>
+
+<h3> Map </h3>
+
+<p> One of the simplest combinators in Bacon is <code>map</code>. This
+lets us apply a function to the values inside a stream. In the code
+above we didn't look at the value inside the stream at any point, but
+that value would have been a jQuery event, as it came
+from <code>asEventStream</code>.
+</p> 
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [1,2,3,4,5])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.map(function(x) { return x + 1}) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.map(x =&gt; x + 1) </code> <br /> </div>
+
+<p> If the argument to <code>map</code> is not a function, Bacon will
+assume you mean the constant function which returns that value. This
+is often useful in combination with <code>asEventStream</code> as
+  we're often not interested in the actual jQuery event. </p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [1,2,3,4,5])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.map('x') }"></div>
+</div>
+<div class="bacon-label"> <code> stream.map('x') </code> <br /> </div>
+
+
+<h3> Scan </h3>
+
+<p> Bacon's <code>scan</code> combinator lets us accumulate
+values. This works pretty much like javascript's <code>reduce</code>
+over arrays, except its asynchronous. We provide an initial value, and
+a function to combine values. The stream now contains the aggregated
+value at each point.</p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [1,2,3,4,5])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.scan(0, function(x,y) { return x + y }) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.scan(0, (x,y) =&gt; x + y) </code> <br /> </div>
+
+Scan lets us implement map-reduce style functions over time. This
+class of functions include things like taking a sum, minimum or
+maximum, or accumulating function effects.
+
+<div class="ex" id="example2">
+
+<div class="example">
+<button> Count up </button>
+<div class="output"> </div>
+<script type="text/javascript">
+  var clicks = $('#example2 button').asEventStream('click')
+  var counter = clicks
+   .map(1)
+   .scan(0, function(x,y) { return x + y })
+   
+  counter.onValue(function(x) { $('#example2 .output').html(x) })
+</script>
+</div>
+
+<pre>
+  var clicks = $('#example2 button').asEventStream('click')
+  var counter = clicks
+    .map(1)
+    .scan(0, (x,y) =&gt; x + y)
+  
+  counter.onValue(x =&gt; $('#example2 .output').html(x))
+</pre>
+</div>
+
+<p> Here we use <code>map</code> to create an event stream of ones for
+each click event. We then chain the <code>scan</code> combinator to
+  create a new event stream containing the accumulated sum.</p>
+
+<h3> Merge</h3>
+
+<p> We've already seen the merge combinator. To remind you, it merges
+  two event-streams into one containing the events from both
+  streams. </p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [9,0,2,0,0,3]).filter(function(x) { return x })"> </div>
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [0,1,0,12,8,0]).filter(function(x) { return x })"> </div>
+  <div class="bacon-output" x-bacon-output="function(a,b) { return a.merge(b) }"></div>
+</div>
+<div class="bacon-label"> <code> streamA.merge(streamB) </code> <br /> </div>
+
+<h3> Scanning function effects </h3>
+
+<p>
+Ok, se lets begin our first effort towards implementing the game. One
+of the most common patterns when using Observables is to
+use <code>scan</code> to accumulate effects of functions. What this
+means, is that we create an event stream that <i> contain functions as
+its values. </i>
+</p>
+
+<p>Here's a marble diagram containing the functions <code>
+  double</code> and <code>inc</code>, that doubles and increments its
+  arguments, where we scan with function application.</p>
+
+<script type="text/javascript">
+  var double = function(x) { return x * 2 }
+  double.describe = "double"
+  var inc = function(x) { return x + 1 }
+  inc.describe = "inc"
+</script>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [double,inc,inc,double,inc])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.scan(2, function(x,f) { return f(x) }) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.scan(2, (x,f) =&gt; f(x)) </code> <br /> </div>
+
+<p> We'll start off by defining the functions we'd like to
+accumulate. We're going to want to be able to control the snake by
+changing directions, so we'll define functions for that. </p>
+
+<pre class="inline">function rotateLeft(pos) {
+  return new Pos(pos.y, -pos.x)
+}
+
+function rotateRight(pos) {
+  return new Pos(-pos.y, pos.x)
+}</pre>
+
+<p>We introduce two buttons for rotating left and right, and get
+the click event streams. </p>
+
+A stream is needed that contains e.g.
+the <i>function</i> <code>rotateLeft</code> for each time the user
+clicks the left button.
+
+We accomplish this by using <code>map</code>. However, we don't want
+Bacon to apply that function, so we supply the lambda <code>() =>
+rotateLeft</code>.
+
+<pre class="inline">
+var lefts  = $("button.left").asEventStream('click')
+var rights = $("button.right").asEventStream('click')
+
+var actions = 
+   lefts.map(() =&gt; rotateLeft).merge(
+  rights.map(() =&gt; rotateRight))
+</pre>
+
+<p>We now accumulate the effects of the rotations from a starting
+  value, <code>startDirection</code>. </p>
+
+<pre class="inline">
+var startDirection = new Pos(0,1)
+var direction = actions.scan(startDirection, (x, f) =&gt; f(x))
+</pre>
+
+<h3> SampledBy </h3>
+
+<p> Sometimes we want to take the events from one stream, but receive
+  events according to another signal. We can do this through the use
+  of the <code>sampledBy</code> combinator. </p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [1,2,0,5,0,12,1,0]).filter(function(x){return x}).toProperty(10)"> </div>
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [0,0,'t',0,'t',0,0,'t']).filter(function(x){return x})"> </div>
+  <div class="bacon-output" x-bacon-output="function(a,b) { return a.sampledBy(b) }"></div>
+</div>
+<div class="bacon-label"> <code> streamA.sampledBy(streamB) </code> <br /> </div>
+
+<p>Back to the game: In order to get a current position, we need to
+   accumulate the current direction. We'd like to advance the game on
+   a timed signal, we're going to call <code>tick</code>. Lets again
+   define it as the input of a button, before changing it to a timer
+   later.</p>
+
+
+<pre class="inline">
+var tick = $('#tick').asEventStream('click')
+</pre>
+
+<p>Now we'd like to advance the position in the
+   current <code>direction</code>, but with the advances timed
+   according to the <code>tick</code> stream.  We make use of
+   the <code>sampledBy</code> combinator.</p>
+
+<pre class="inline">
+var currentDirection = direction.sampledBy(tick)
+</pre>
+
+<p> Of course, to get a current position, we now simply scan the
+current direction from a starting postion, <code>startPosition</code>. </p>
+
+<pre class="inline">
+var startPosition = new Pos(0,0)
+var position = currentDirection.scan(
+  startPosition, (x, y) =&gt; x.add(y))
+</pre>
+
+We'll finally visualize what's going on by drawing out the current
+position. We'll map the single position into an array before passing
+it to the snake-drawing routine, as this expects an array.
+
+<pre class="inline">
+position.map(Array).onValue(drawSnake)
+</pre>
+
+Here's the Bacon code so far.
+
+<div class="ex" id="example3">
+<script type="text/javascript">
+  var gameX = 7;
+  var gameY = 7;
+  
+  function drawGame(sel) {
+    var game = $(sel)
+    for (var i = 0; i < gameX; i++) {
+      var row = $('<div/>').addClass('row')
+      game.append(row)
+      for (var j = 0; j < gameY; j++) 
+        row.append($('<div/>').addClass('cell'))
+    }
+       
+  } 
+  function drawSnake(sel) {
+    var game = $(sel)
+    return function(ps) { 
+      game.find('.cell').removeClass('snake')
+      for (var i in ps) {
+        game.find('.row:eq('+ps[i].y+')').find('.cell:eq('+ps[i].x+')').addClass('snake')
+      }
+    }
+  }
+  function drawApple(sel) {
+    var game = $(sel)
+    return function(p) { 
+      game.find('.cell').removeClass('apple')
+      game.find('.row:eq('+p.y+')').find('.cell:eq('+p.x+')').addClass('apple')
+    }
+  }
+  function Pos(x, y) {
+    this.x = x; this.y = y;
+    this.describe = x + ', ' + y
+    this.equals = function(p) { return this.x === p.x && this.y === p.y }
+    this.add = function(p) { return new Pos((this.x + p.x + gameX) % gameX, (this.y + p.y + gameX) % gameX) }
+  }
+  
+  randomPos = function() {
+    return new Pos(Math.floor(Math.random() * 5), Math.floor(Math.random() * 5))
+  }
+
+  function rotateRight(pos) {
+    return new Pos(-pos.y, pos.x)
+  }
+  function rotateLeft(pos) {
+    return new Pos(pos.y, -pos.x)
+  }
+</script>
+
+<div class="example">
+  <button class="left" > Left </button>
+  <button class="right" > Right </button>
+  <button class="tick" > Tick </button>
+  <div>Direction: <span class="dir"></span></div>
+  <div>Position: <span class="pos"></span></div>
+  <div><div class="game"></div></div>
+  <script type="text/javascript">
+    var makeGame = function(selector, bindKeyTimer) {
+      var ex = $(selector)
+    
+      if (!bindKeyTimer) {
+        var lefts  = ex.find('.left').asEventStream('click')
+        var rights = ex.find('.right').asEventStream('click')
+        var tick   = ex.find('.tick').asEventStream('click')
+      }
+      else {
+        var keys = $(document).asEventStream('keydown').map('.keyCode')
+        var lefts  = keys.filter(function(x) { return x === 37 })
+        var rights = keys.filter(function(x) { return x === 39 })
+        var tick   = Bacon.interval(300)
+      } 
+      var actions = 
+         lefts.map(function() { return rotateLeft }).merge(
+        rights.map(function() { return rotateRight }))
+
+      var startDirection = new Pos(0,1),
+          startPosition = new Pos(0,0)
+      var direction = actions.scan(startDirection, function(x, f) { return f(x) })
+      var position  = direction
+        .sampledBy(tick)
+        .scan(startPosition, function(x,y) { return x.add(y) });
+  
+      direction.onValue(function(x) { ex.find('.dir').html(x.describe) })
+      position.onValue(function(x) { ex.find('.pos').html(x.describe) })
+    
+      drawGame(selector + ' .game')
+      return position;
+      }
+    var pos = makeGame('#example3')
+    pos.map(Array).onValue(drawSnake('#example3 .game'))
+  </script>
+
+</div>
+ <pre>
+var lefts  = $('#example3 .left').asEventStream('click'),
+    rights = $('#example3 .right').asEventStream('click'),
+    tick   = $('#example3 .tick').asEventStream('click')
+
+var actions = 
+   lefts.map(() =&gt; rotateLeft).merge(
+  rights.map(() =&gt; rotateRight))
+
+var startDirection = new Pos(0,1),
+    startPosition = new Pos(0,0)
+
+var direction = actions.scan(startDirection, (x, f) =&gt; f(x) )
+var position  = direction
+  .sampledBy(tick)
+  .scan(startPosition, (x,y) =&gt; x.add(y));
+
+position.map(Array).onValue(drawSnake)
+ </pre>
+</div>
+
+
+<h3> SlidingWindow </h3>
+
+<p>Bacon already has a combinator for creating a sliding (or should we
+  say slithering, hur hur) window of the nth latest values. Lets try
+  and apply it.</p>
+
+<div id="example4" class="ex">  
+  <div class="example">
+    <button class="left" > Left </button>
+    <button class="right" > Right </button>
+    <button class="tick" > Tick </button>
+    <div><div class="game"></div></div>
+  </div>
+<pre>
+var snake = position.slidingWindow(3)
+snake.onValue(drawSnake)</pre>
+
+</div> 
+<script type="text/javascript">
+  var pos = makeGame('#example4')
+  pos.slidingWindow(3).onValue(drawSnake('#example4 .game'))
+</script> 
+
+<p>Ok, so pretty cool, though it only gets us so far, as there is no way
+to increase the length. We'll need to implement the possibility of
+  eating fruit.</p>
+
+<h3> Filter </h3>
+
+The filter combinator, like map is much like the operation on arrays,
+and filters out events according to a predicate.
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [9,1,2,10,2,3])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.filter(function(x) { return x > 2 }) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.filter(x =&gt; x > 2) </code> </div>
+
+<h3> Take / Skip </h3>
+
+<p> The <code>take</code> and <code>skip</code> combinators allows you
+to take or skip a certain number of elements from the start of an
+event stream, much in the same way as array slicing.</p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(200, [9,1,2,10,2,3])"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.skip(3) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.skip(3) </code> </div>
+
+<h3> Event Switching </h3>
+
+If you're following along so far you might figure we'd implement
+something along the lines of the following.
+
+<pre class="inline">
+var applePos = new Pos(3,3)
+var apple = position
+  .filter(p =&gt; p.equals(applePos)) 
+  .take(1)
+</pre>
+
+<p>This gets us the first event where the position of the snake is the
+same as the position of the apple. But how do we proceed from there?
+At this point we must somehow "move" the position of the apple, but as
+Bacon is essentially a functional library, we have no way of doing so
+in terms of side-effects, which would be more familiar to most
+programmers. </p>
+
+<p> The solution to this problem will come in terms of event
+switching, a common and very important idiom in reactive
+programming. Essentially this lets implement functionality on the type
+<i>"when x happens, start doing Y"</i>. x here will be an event, and Y will
+be an event-stream of the new events you're interested in. </p>
+
+<p> Of course, the event <code>x</code> will in turn come from some
+event-stream <code>X</code>, as much of the point of Bacon is that we
+don't write program in terms of individual events. 
+
+Event switching is implemented in Bacon primarily through the
+function <code>flatMapLatest</code></p>
+
+<h3> FlatMapLatest </h3>
+
+<p>The <code>flatMapLatest</code> combinator takes an
+event-stream <code>X</code>, and from each event <code>x</code> in it,
+maps it to a new event-stream <code>f(x)</code>, for a specified
+function <code>f</code>.</p>
+
+<div class="bacon-marble">
+  <div class="bacon-input"  x-bacon-input="Bacon.sequentially(400, [9,1,2,10]).filter(function(x) { return x })"> </div>
+  <div class="bacon-output" x-bacon-output="function(a) { return a.flatMapLatest(function(x) { return Bacon.sequentially(150,[x,x+1,x+2]) }) }"></div>
+</div>
+<div class="bacon-label"> <code> stream.flatMapLatest(x =&gt; Bacon.sequentially(100, [x, x+1, x+2]) </code> </div>
+
+<p> Here we map each numeric event <code>x</code> to the event-stream <code>[x, x+1,
+x+2]</code>. However, the delays are set such that the next event from
+the source stream occurs before the <code>x+2</code> event, so it is
+skipped. Only on the last event <code>10</code>, there are no more
+events from the source stream, so all the events for <code>10, 11,
+12</code> appear in the output stream</p>
+
+
+<p>Essentially, when an event <code>x</code> occurs in stream <code>X</code>, the
+resulting stream "switches" to <code>f(x)</code>.</p>
+
+<p>Now, one solution to our problem is to define an event-stream that
+   is recursive in terms of itself. As javascript does not have
+   laziness, we simply promote the apple stream to an argument-less
+   function returning a stream, and pass that function
+   to <code>flatMapLatest</code>
+</p> 
+
+<pre class="inline">
+function apple() {
+  var applePos = randomPos()
+  return 
+     position
+      .filter(p =&gt; p.equals(applePos))
+      .take(1)
+      .flatMapLatest(apple)
+      .toProperty(applePos)
+} 
+</pre>
+
+<p> That is, whenever the snake eats the apple, we switch to a new
+event-stream, which is the same stream as before, but with the apple
+in a new randomized position. We also call <code>toProperty</code>,
+which starts the stream with the apple's position. Without this, there
+would be no values in the stream. </p>
+
+<p> Note that we define the entire behaviour of the apple value
+    here. In a more imperative setting, this value would be updated
+    from a multitude of places in the code as a reaction to the
+    appropriate event. This has some advantages, and some drawbacks in
+  it being less natural to a developer more used to imperative programming. </p>
+
+<p> In fact, event streams are quite similar to values in a
+    spreadsheet, where we might write something like <code>A1 = B1 +
+    C2</code>. The value <code>A1</code> defines <i>itself</i> in
+    terms of other cells in the spreadsheet, and is never updated from
+  an external location.</p>
+
+<p> Here's what we have so far. </p>
+
+<div id="example5" class="ex">  
+  <div class="example">
+    <button class="left" > Left </button>
+    <button class="right" > Right </button>
+    <button class="tick" > Tick </button>
+    <div> <div class="game"></div> </div>
+  </div>
+
+</div> 
+<script type="text/javascript">
+ (function() {  
+  var pos = makeGame('#example5')
+  var apple = function() { 
+    var applePos = randomPos()
+    return pos.
+          filter(function(x) { return x.equals(applePos) }).
+          take(1).
+          flatMapLatest(apple).
+          toProperty(applePos)
+  }
+  pos.slidingWindow(3).onValue(drawSnake('#example5 .game'))
+  apple().onValue(drawApple('#example5 .game'))
+})()
+</script> 
+
+<h3> Increasing the length </h3>
+
+<p> Ok, so each time we eat an apple we want to increase the length of
+the snake by one. We want something like
+the <code>slidingWindow</code> combinator, except we want the window
+size to grow dynamically according to some other stream, but such a
+combinator does not exist in Bacon. Time to create our own combinator!
+</p>
+
+<h3> Implementing custom combinators </h3>
+
+<p> One typically adds to the Bacon prototype in order to be able to use 
+the nice DSL style we're accustomed to.  </p>
+
+<p> Here's how we implement a custom combinator in Bacon. We're going
+to take as argument an observable that decides the length of the
+window. </p>
+
+<pre class="inline">
+Bacon.prototype.slidingWindowBy(lengthObs) = function() {
+  var self = this
+  return new Bacon.EventStream(sink =&gt; {
+    var buf = []
+    var length = 0
+    
+    self.onValue(x => {
+      buf.unshift(x)
+      buf = buf.slice(length)
+      sink(new Bacon.Next(buf))
+    })
+    
+    lengthObs.onValue(n => {
+      length = n
+    })
+  })
+}
+</pre>
+
+<p> What we do is simply to return a new event-stream. As argument to
+the constructor, we give a parameter <code>sink</code> that is a
+function. We send new events by invoking this function with the next
+value. Bacon has three type of
+events, <code>Next</code>, <code>End</code>
+and <code>Error</code>. Right now we're only interested in
+the <code>Next</code> type of events, which we specify by create a
+new <code>Bacon.Next</code> event to wrap the value that we want to
+send, in this case the current "window".
+</p>
+
+<p> 
+When we get a length value, we do nothing except for updating the
+length value, and so we don't call the sink function with anything.
+
+</p>
+
+<p> This is of course quite a bit of code for something fairly simple,
+  but I hope you appreciate how we've nicely encapsulated a pattern
+  here, that is easily re-usable later if we'd like. This is typical
+  of coding in this style. Abstracting over <i> streams </i> of events
+  allow us to encapsulate many more behaviours than if we limit
+  ourselves to something like promises. </p>
+
+<p> So below is our, for now, final version of the game. The remaining
+features are left as an exercise for the reader to familiarize herself
+further with Bacon.js. Features to do.</p>
+
+<ul>
+  <li> Restart the game when the snake is eating itself. </li>
+  <li> Make sure there are no "lost" key events. That is if the play
+  queues commands by rapidly pushing buttons, make sure they are
+  handled on subsequent ticks. </li>
+  <li> Make sure the apple doesn't spawn inside the snake.
+</ul>
+
+<p> For restarting, I recommend taking a look at the Bacon docs,
+    especially the <code>takeUntil</code> combinator, and combining it
+  with event switching. </p>
+
+<p> For queueing input, check out join patterns. </p>
+
+<p> Hope you enjoyed following along in this tutorial. Here's out
+final version of the game with code. If you want to cheat and check
+out the finished version, you can play
+it <a href="http://philipnilsson.github.io/Snake-Bacon/">
+here.</a></p>
+
+<div id="example6" class="ex">  
+  
+  <p style="font-size: small"> Use left/right to steer. You can't die in this version, 
+    try finishing the game yourself. </p>
+  
+  <div class="example">
+    <button class="start" > Start </button>
+    <div><div class="game"></div></div>
+  </div>
+  <pre>
+var lefts  = $('#example3 .left').asEventStream('click'),
+    rights = $('#example3 .right').asEventStream('click'),
+    tick   = $('#example3 .tick').asEventStream('click')
+
+var actions = 
+   lefts.map(() =&gt; rotateLeft).merge(
+  rights.map(() =&gt; rotateRight))
+
+var startDirection = new Pos(0,1),
+    startPosition = new Pos(0,0)
+
+var direction = actions.scan(startDirection, (x,f) =&gt; f(x))
+var position  = direction
+  .sampledBy(tick)
+  .scan(startPosition, function(x,y) { return x.add(y) });
+
+function apple() {
+  var applePos = randomPos()
+  return 
+     position
+      .filter(p =&gt; p.equals(applePos))
+      .take(1)
+      .flatMapLatest(apple)
+      .toProperty(applePos)
+} 
+
+var appl = apple()
+var length = appl.map(1).scan(1, (x,y) =&gt; x + y )
+
+pos.slidingWindowBy(length)
+   .onValue(drawSnake)
+
+appl.onValue(drawApple)
+</pre>
+
+</div> 
+
+<script type="text/javascript">
+  
+var gameStarted = false;
+  $('#example6 .start').click(function() {
+  
+  if (gameStarted)
+    return;
+  gameStarted = true;
+
+  Bacon.scheduler = window.oldTimer;
+  
+  Bacon.Observable.prototype.slidingWindowBy = function(lengthObs) {
+    var self = this
+    return new Bacon.EventStream(function(sink) {
+      var buf = []
+      var length = 0
+      
+      lengthObs.onValue(function(n) {
+        length = n
+      })
+      self.onValue(function(x) {
+        buf.unshift(x)
+        buf = buf.slice(0, length)
+        sink(new Bacon.Next(buf))
+      })
+      
+      return function() { }
+    })
+  }
+  var pos = makeGame('#example6', true)
+  
+  var apple = function() { 
+    var applePos = randomPos()
+    return pos.
+          filter(function(x) { return x.equals(applePos) }).
+          take(1).
+          flatMapLatest(apple).
+          toProperty(applePos)
+  }
+  var appl = apple()
+  pos.slidingWindowBy(appl.map(1).scan(1, function(x,y) { return x + y })).onValue(drawSnake('#example6 .game'))
+  appl.onValue(drawApple('#example6 .game'))
+  })
+</script> 
+
+<script type="text/javascript">
+Bacon.logMarble = function(elem, stream) {
+  stream.onValue(function(x) {
+    var time = window.sc.now()
+    var parent = $(elem).parent()
+    var mn = parent.attr('x-time-min')
+    var min = Math.min(time, typeof mn === 'undefined' ? 9007199254740992 : parseInt(mn))
+    var max = Math.max(time, parseInt(parent.attr('x-time-max')) || 0)
+    parent.attr('x-time-min', min);
+    parent.attr('x-time-max', max);
+    var content = typeof x.describe === 'undefined' ? x : x.describe;
+    $(elem).append(
+      $('<span style="position: absolute" x-time="'+time+'"/>').html(content))
+  })
+}
+
+$('.bacon-marble').each(function() {
+ var inputs = $(this).find('.bacon-input').map(function() {
+   var stream = eval(this.attributes['x-bacon-input'].value)
+   $(this).append('<div style="display: inline">&nbsp;</div>')
+   Bacon.logMarble(this, stream)
+   return stream
+ }).toArray()
+ $(this).find('.bacon-output').each(function() {
+   var stream = eval('(' + this.attributes['x-bacon-output'].value + ')').apply(null, inputs)
+   var elem = this;
+   $(this).append('<div style="display: inline">&nbsp;</div>')
+   Bacon.logMarble(this, stream)
+   stream.onEnd(function() {
+     var parent = elem.parentNode;
+     var elems = $(parent).children('div').children('span').toArray()
+     var max = parent.attributes['x-time-max'].value
+     var min = parent.attributes['x-time-min'].value
+     var delta = max - min
+     for (var i in elems) {
+       $(elems[i]).css('left', Math.floor(100 * (elems[i].attributes['x-time'].value - min) / delta / 1.1)*1 + 2 + '%')
+    }
+   })
+ })
+ 
+})
+</script>
+
+</article>
+
+</body>
+</html>

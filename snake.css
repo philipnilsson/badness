@@ -1,0 +1,17 @@
+.row { padding: 0; margin: 0; height: 12px}
+.cell { 
+  width: 10px; 
+  height: 10px; 
+  padding: 0;
+  margin: 1px;
+  display: inline-block;
+  background-color: white;
+}
+.snake { background-color: green }
+.apple { background-color: red }
+.game {
+  padding: 5px;
+  box-shadow: 0 0 5px lightgray;
+  display: inline-block;
+  clear: both;
+}

@@ -1,0 +1,78 @@
+
+@font-face {font-family:"Beteckna lower case";src:url("Beteckna_by_tarzeau.eot?") format("eot"),url("Beteckna_by_tarzeau.woff") format("woff"),url("Beteckna_by_tarzeau.ttf") format("truetype"),url("Beteckna_by_tarzeau.svg#BetecknaLowerCase") format("svg");font-weight:normal;font-style:normal;}
+@font-face {font-family:"Beteckna lower case bold";src:url("BetecknaLowerCaseBold.ttf") format("truetype") }
+
+body { 
+  font-size: 110%;
+  margin: 0;
+  padding: 0;
+  font-family: calibri, "open sans", sans-serif;
+  background-color: #eeeeee;
+}
+article.content {
+  padding: 3em; 
+  background-color: rgb(249,250,252);
+}
+article.content, #header-text-wrapper { 
+  max-width: 650px;
+  margin-left: auto;
+  margin-right: auto;
+}
+.header { 
+  width: 100%;
+  background-color: #202020;
+  color: white;
+}
+h2 {
+  letter-spacing: 0.1em;
+  line-height: 1.2em;
+}
+p.intro { 
+ font-family: "beteckna lower case", sans-serif; 
+ font-size: 120%;
+ letter-spacing: 0.05em;
+}
+
+h2,h3,p {
+  color: #202020;
+  margin-top: 1em;
+}
+
+h1 { margin: 0 }
+h1, h2 { font-family: "beteckna lower case bold", "beteckna lower case", sans-serif;  }
+h3     { font-family: "beteckna lower case", sans-serif; font-size: 170% }
+h2 { margin: 0;}
+h2 { font-size: 300%; }
+code, pre { 
+  font-family: "droid sans mono"; 
+  font-size: 80%; 
+  border-radius: 0.3em;
+}
+pre { margin: 1em }
+
+p.intro a {
+  font-weight: bold;
+}
+
+a {
+  text-decoration: none;
+}
+
+a:visited {
+  color: #008000;
+}
+
+button {
+  width: 8em;
+  background-color: rgb(0, 30, 109);
+  padding: 0.6em;
+  border-radius: 5px; 
+  color: white;
+  border: none;
+  font-family: "beteckna lower case";
+  margin-bottom: 1em;
+}
+
+.cell {
+  border-radius: 2px;
+}
