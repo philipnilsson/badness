@@ -647,8 +647,7 @@ resulting stream "switches" to <code>f(x)</code>.</p>
 <pre class="inline">
 function apple() {
   var applePos = randomPos()
-  return 
-     position
+  return position
       .filter(p =&gt; p.equals(applePos))
       .take(1)
       .flatMapLatest(apple)
