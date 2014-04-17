@@ -728,7 +728,7 @@ Bacon.Observable.prototype.slidingWindowBy = function(lengthObs) {
     
     self.onValue(x => {
       buf.unshift(x)
-      buf = buf.slice(length)
+      buf = buf.slice(0, length)
       sink(new Bacon.Next(buf))
     })
     
