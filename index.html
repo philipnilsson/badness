@@ -374,8 +374,6 @@ var direction = actions.scan(startDirection, (x, f) =&gt; f(x))
 </div>
 <div class="bacon-label"> <code> streamA.sampledBy(streamB) </code> <br /> </div>
 
-<p> Technically, Bacon requires you to 
-
 <p>Back to the game: In order to get a current position, we need to
    accumulate the current direction. We'd like to advance the game on
    a timed signal, we're going to call <code>tick</code>. Lets again
