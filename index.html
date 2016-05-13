@@ -720,7 +720,7 @@ to take as argument an observable that decides the length of the
 window. </p>
 
 <pre class="inline">
-Bacon.prototype.slidingWindowBy(lengthObs) = function() {
+Bacon.Observable.prototype.slidingWindowBy = function(lengthObs) {
   var self = this
   return new Bacon.EventStream(sink =&gt; {
     var buf = []
@@ -728,7 +728,7 @@ Bacon.prototype.slidingWindowBy(lengthObs) = function() {
     
     self.onValue(x => {
       buf.unshift(x)
-      buf = buf.slice(length)
+      buf = buf.slice(0, length)
       sink(new Bacon.Next(buf))
     })
     
